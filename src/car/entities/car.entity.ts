@@ -3,9 +3,10 @@ import {
   BeforeUpdate,
   Column,
   CreateDateColumn,
-  Entity,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+  Entity, OneToMany,
+  PrimaryGeneratedColumn
+} from "typeorm";
+import { CarImageEntity } from "./car-image.entity";
 
 @Entity('car')
 export class Car {
@@ -41,6 +42,12 @@ export class Car {
     default: [],
   })
   tags: string[];
+
+  @OneToMany(() => CarImageEntity, (car) => car.car, {
+    cascade: true,
+    eager: true,
+  })
+  carImages?: CarImageEntity[];
 
   @CreateDateColumn({
     type: 'timestamp with time zone',

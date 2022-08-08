@@ -32,4 +32,9 @@ export class CreateCarDto {
   @IsArray()
   @IsOptional()
   tags?: string[];
+
+  @IsString({ each: true })
+  @IsArray()
+  @IsOptional()
+  carImages?: string[];
 }

@@ -1,10 +1,10 @@
 import { HttpException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { CreateCarDto, UpdateCarDto } from './dto';
-import { Car } from './entities/car.entity';
+import { Car, CarImageEntity } from './entities';
 import { isUUID } from 'class-validator';
 
 @Injectable()
@@ -12,7 +12,12 @@ export class CarService {
   private readonly logger = new Logger('CarService');
 
   constructor(
-    @InjectRepository(Car) private readonly carRepository: Repository<Car>,
+    @InjectRepository(Car)
+    private readonly carRepository: Repository<Car>,
+    @InjectRepository(CarImageEntity)
+    private readonly carImageRepository: Repository<CarImageEntity>,
+
+    private readonly dataSource: DataSource,
   ) {}
 
   async findAll(paginationDto: PaginationDto) {
@@ -21,7 +26,9 @@ export class CarService {
     const cars = await this.carRepository.find({
       take: limit,
       skip: offset,
-      //active: true,
+      relations: {
+        carImages: true,
+      },
     });
 
     if (!cars) {
@@ -38,9 +45,12 @@ export class CarService {
     if (isUUID(term)) {
       car = await this.carRepository.findOneBy({ id: term });
     } else {
-      const queryBuilder = this.carRepository.createQueryBuilder();
+      const queryBuilder = this.carRepository.createQueryBuilder('c');
       car = await queryBuilder
-        .where('model = :model', { model: term.toLowerCase() })
+        .where('model = :model', {
+          model: term.toLowerCase().replace(' ', '_').replace("'", ''),
+        })
+        .leftJoinAndSelect('c.carImages', 'cImages')
         .getOne();
     }
 
@@ -54,27 +64,43 @@ export class CarService {
 
   async create(createCarDto: CreateCarDto) {
     const { model } = createCarDto;
-    const result = await this.findOne(model);
 
-    if (result) {
+    const exist = await this.findOne(model);
+
+    if (exist) {
       this.logger.error(`Car with ${model} already exists`);
       throw new HttpException(`Car with ${model} already exists`, 409);
     }
 
-    const car = this.carRepository.create(createCarDto);
+    const { carImages = [], ...productDetails } = createCarDto;
+
+    const car = await this.carRepository.create({
+      ...productDetails,
+      carImages: carImages.map((image) =>
+        this.carImageRepository.create({ url: image }),
+      ),
+    });
     await this.carRepository.save(car);
     return car;
   }
 
   async update(id: string, updateCarDto: UpdateCarDto) {
-    const result = await this.findOne(id);
+    const { carImages, ...productDetails } = updateCarDto;
 
-    if (!result) {
+    const new_car = await this.carRepository.preload({
+      id,
+      ...productDetails,
+    });
+
+    if (!new_car) {
       this.logger.error(`Car with ${id} not found`);
       throw new HttpException('Not found', 404);
     }
 
-    const new_car = await this.carRepository.preload({ id, ...updateCarDto });
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
     await this.carRepository.save(new_car);
     return new_car;
   }
