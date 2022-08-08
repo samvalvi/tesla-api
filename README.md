@@ -26,24 +26,22 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
-## Installation
+## Repository
+`Clone the repository`
 
+## Installation
 ```bash
 $ npm install
 ```
+``
+Clone the .env.example file and rename it to .env
+``
 
-## Running the app
+``
+Start up the database
+``
 
-```bash
-# development
-$ npm run start
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
-```
 
 ## Test
 

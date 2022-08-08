@@ -2,8 +2,6 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 
-import { GetEnv } from './config/env.config';
-
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
@@ -16,8 +14,6 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(GetEnv().port);
+  await app.listen(process.env.PORT || 3000);
 }
-bootstrap().then(() =>
-  console.log(`Application is running on: ${GetEnv().port}`),
-);
+bootstrap().then(() => console.log(`Application is running`));
